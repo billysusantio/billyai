@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "BillyAI — a WhatsApp clone of Billy that chats with his team and sends per-role / per-team reminders. Fonnte + Anthropic Claude + Railway.",
+  "description": "BillyAI — a WhatsApp clone of Billy that chats with his team and sends per-role / per-team reminders. Fonnte + Gemini + Railway.",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -13,7 +13,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.40.0",
+    "@google/genai": "^1.0.0",
     "axios": "^1.7.9",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",

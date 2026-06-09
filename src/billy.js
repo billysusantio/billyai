@@ -1,13 +1,14 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 import { findMemberByPhone } from "./config.js";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const MODEL = process.env.BILLY_MODEL || "claude-sonnet-4-6";
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const MODEL = process.env.BILLY_MODEL || "gemini-2.5-flash-lite";
 
 // BillyAI's persona. This is a placeholder — replace/extend with the real
 // voice, facts and boundaries once Billy's backend doc arrives.
 const SYSTEM_PROMPT = `You are BillyAI, a WhatsApp "clone" of Billy talking to his team.
 - Speak in Billy's voice: warm, direct, encouraging, lightly informal.
+- Reply in the same language the teammate writes in (Bahasa Indonesia or English).
 - You help teammates, answer questions, and nudge them about their work.
 - Keep replies short and chat-friendly (this is WhatsApp, not email).
 - If you don't know something only the real Billy would know, say so honestly
@@ -15,12 +16,13 @@ const SYSTEM_PROMPT = `You are BillyAI, a WhatsApp "clone" of Billy talking to h
 
 // Very small in-memory conversation history keyed by phone number.
 // For production, persist this (Railway volume / DB) so it survives restarts.
+// Each entry is { role: "user" | "model", text: string } in Gemini's format.
 const histories = new Map();
 const MAX_TURNS = 12; // keep the last N messages per person
 
-function remember(phone, role, content) {
+function remember(phone, role, text) {
   const h = histories.get(phone) ?? [];
-  h.push({ role, content });
+  h.push({ role, text });
   while (h.length > MAX_TURNS) h.shift();
   histories.set(phone, h);
 }
@@ -39,19 +41,21 @@ export async function reply(phone, text) {
 
   remember(phone, "user", text);
 
-  const msg = await client.messages.create({
+  // Map our stored history to Gemini's contents format.
+  const contents = histories
+    .get(phone)
+    .map((m) => ({ role: m.role, parts: [{ text: m.text }] }));
+
+  const response = await ai.models.generateContent({
     model: MODEL,
-    max_tokens: 500,
-    system: `${SYSTEM_PROMPT}\n\n${who}`,
-    messages: histories.get(phone),
+    contents,
+    config: {
+      systemInstruction: `${SYSTEM_PROMPT}\n\n${who}`,
+      maxOutputTokens: 500,
+    },
   });
 
-  const out = msg.content
-    .filter((b) => b.type === "text")
-    .map((b) => b.text)
-    .join("\n")
-    .trim();
-
-  remember(phone, "assistant", out);
+  const out = (response.text ?? "").trim();
+  remember(phone, "model", out);
   return out || "…";
 }

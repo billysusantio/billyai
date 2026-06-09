@@ -4,19 +4,19 @@ A WhatsApp "clone" of **Billy** that his team can chat with, and that sends
 **per-role / per-team reminders** on a schedule. Built to run on Railway.
 
 **Stack:** Node.js · [Fonnte](https://fonnte.com) (unofficial WhatsApp API) ·
-[Anthropic Claude](https://docs.anthropic.com) · [Railway](https://railway.app)
+[Google Gemini](https://ai.google.dev) (2.5 Flash-Lite) · [Railway](https://railway.app)
 
 ---
 
 ## How it works
 
 ```
-WhatsApp ──▶ Fonnte ──▶ POST /webhook ──▶ BillyAI (Claude) ──▶ Fonnte ──▶ WhatsApp
+WhatsApp ──▶ Fonnte ──▶ POST /webhook ──▶ BillyAI (Gemini) ──▶ Fonnte ──▶ WhatsApp
                                    └──▶ reminder scheduler (node-cron) ──▶ Fonnte
 ```
 
 - **Chat** — a teammate messages the WhatsApp number; Fonnte forwards it to
-  `/webhook`; `src/billy.js` asks Claude for a reply in Billy's voice (with the
+  `/webhook`; `src/billy.js` asks Gemini for a reply in Billy's voice (with the
   sender's role/team as context) and sends it back via Fonnte.
 - **Reminders** — `src/reminders.js` reads `config/reminders.json` and fires each
   reminder on its cron schedule to everyone matching its role/team target.
@@ -26,7 +26,7 @@ WhatsApp ──▶ Fonnte ──▶ POST /webhook ──▶ BillyAI (Claude) ─
 | Path | Purpose |
 |------|---------|
 | `src/index.js` | Express server: health check + `/webhook` |
-| `src/billy.js` | Claude-powered persona + reply logic |
+| `src/billy.js` | Gemini-powered persona + reply logic |
 | `src/fonnte.js` | Send WhatsApp messages via Fonnte |
 | `src/reminders.js` | Cron scheduler for reminders |
 | `src/config.js` | Loads team + reminder config |
@@ -44,7 +44,7 @@ WhatsApp ──▶ Fonnte ──▶ POST /webhook ──▶ BillyAI (Claude) ─
    ```
 2. **Get tokens**
    - `FONNTE_TOKEN` — from your Fonnte device dashboard.
-   - `ANTHROPIC_API_KEY` — from the Anthropic console.
+   - `GEMINI_API_KEY` — free key from https://aistudio.google.com/apikey
 3. **Run locally**
    ```bash
    npm run dev
@@ -79,7 +79,7 @@ WhatsApp ──▶ Fonnte ──▶ POST /webhook ──▶ BillyAI (Claude) ─
 
 ## TODO (waiting on Billy's backend doc)
 
-- [ ] Replace the placeholder persona in `src/billy.js` with Billy's real voice/facts.
+- [ ] Replace the placeholder persona (`SYSTEM_PROMPT` in `src/billy.js`) with Billy's real voice/facts.
 - [ ] Fill `config/teams.json` and `config/reminders.json` with real data.
 - [ ] Persist conversation history + config (DB or Railway volume).
 - [ ] Confirm Fonnte webhook payload field names for the device plan in use.
