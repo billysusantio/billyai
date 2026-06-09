@@ -1,0 +1,23 @@
+{
+  "_comment": "Each reminder targets people by role and/or team, runs on a cron schedule, and sends 'message'. 'cron' uses standard 5-field syntax in the TZ from .env. target.roles / target.teams are arrays; empty or omitted means 'everyone'. Copy this to reminders.json.",
+  "reminders": [
+    {
+      "id": "sales-daily-standup",
+      "message": "Morning! 🌅 Drop your top 3 deals for today in the group. — Billy",
+      "cron": "0 9 * * 1-5",
+      "target": { "roles": ["sales"], "teams": [] }
+    },
+    {
+      "id": "ops-weekly-review",
+      "message": "Friday wrap-up: please log this week's tickets before EOD. — Billy",
+      "cron": "0 16 * * 5",
+      "target": { "roles": [], "teams": ["ops"] }
+    },
+    {
+      "id": "all-hands-hydrate",
+      "message": "Reminder to take a break and drink water 💧 — Billy",
+      "cron": "0 14 * * *",
+      "target": { "roles": [], "teams": [] }
+    }
+  ]
+}

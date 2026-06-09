@@ -1,0 +1,17 @@
+{
+  "_comment": "Map each team member to a role and team. 'phone' is the WhatsApp number in international format with no '+' (Fonnte format), e.g. 6281234567890. Copy this to teams.json and fill in real data once Billy's backend doc arrives.",
+  "members": [
+    {
+      "name": "Aldo",
+      "phone": "6281234567890",
+      "role": "sales",
+      "team": "growth"
+    },
+    {
+      "name": "Bena",
+      "phone": "6289876543210",
+      "role": "support",
+      "team": "ops"
+    }
+  ]
+}
