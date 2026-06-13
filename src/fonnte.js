@@ -1,4 +1,4 @@
-mport axios from "axios";
+import axios from "axios";
 
 const FONNTE_SEND_URL = "https://api.fonnte.com/send";
 const FONNTE_GROUPS_URL = "https://api.fonnte.com/get-groups";
