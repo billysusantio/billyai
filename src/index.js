@@ -1,4 +1,4 @@
-mport "dotenv/config";
+import "dotenv/config";
 import express from "express";
 import { reply } from "./billy.js";
 import { sendMessage } from "./fonnte.js";
