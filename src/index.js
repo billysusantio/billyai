@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import { reply } from "./billy.js";
-import { sendMessage } from "./fonnte.js";
+import { sendMessage, getGroups } from "./fonnte.js";
 import { startReminders } from "./reminders.js";
 
 const app = express();
