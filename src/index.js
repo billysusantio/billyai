@@ -15,6 +15,15 @@ const BOT_LID = process.env.BOT_LID || "224146457903221"; // WhatsApp internal L
 // Health check (Railway uses this to confirm the service is up).
 app.get("/", (_req, res) => res.send("BillyAI is awake 🤖"));
 
+app.get("/debug-groups", async (_req, res) => {
+          try {
+                      const data = await getGroups();
+                      res.json(data);
+          } catch (err) {
+                      res.status(500).json({ error: err.message });
+          }
+});
+
 // Inbound WhatsApp messages from Fonnte land here.
 // Configure this URL as your device webhook in the Fonnte dashboard.
 app.post("/webhook", async (req, res) => {
