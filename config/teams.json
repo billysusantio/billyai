@@ -1,0 +1,22 @@
+{
+  "members": [
+    {
+      "name": "Billy",
+      "phone": "628170074313",
+      "role": "owner",
+      "team": "leadership"
+    },
+    {
+      "name": "Vincent",
+      "phone": "6287889192230",
+      "role": "owner",
+      "team": "leadership"
+    },
+    {
+      "name": "Resan",
+      "phone": "6281229483152",
+      "role": "head_of_marketing",
+      "team": "marketing"
+    }
+  ]
+}
