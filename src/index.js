@@ -22,6 +22,10 @@ app.get("/debug-groups", async (_req, res) => {
 app.post("/webhook", async (req, res) => {
   const secret = process.env.WEBHOOK_SECRET;
   if (secret && req.query.secret !== secret) return res.status(401).send("unauthorized");
+
+  // Log raw body so we can inspect all fields Fonnte sends
+  console.log("[webhook] raw body:", JSON.stringify(req.body));
+
   const isGroup = req.body.isgroup === true || req.body.isgroup === "true";
   const groupId = isGroup ? (req.body.sender || req.body.pengirim) : null;
   const from = isGroup ? (req.body.member || req.body.username) : (req.body.sender || req.body.from || req.body.phone);
