@@ -3,6 +3,8 @@ import express from "express";
 import { reply } from "./billy.js";
 import { sendMessage, getGroups } from "./fonnte.js";
 import { startReminders } from "./reminders.js";
+import { saveMessage, getDueReminders, markReminderSent } from "./db.js";
+import cron from "node-cron";
 
 const app = express();
 app.use(express.json());
@@ -23,25 +25,44 @@ app.post("/webhook", async (req, res) => {
   const secret = process.env.WEBHOOK_SECRET;
   if (secret && req.query.secret !== secret) return res.status(401).send("unauthorized");
 
-  // Log raw body so we can inspect all fields Fonnte sends
-  console.log("[webhook] raw body:", JSON.stringify(req.body));
-
   const isGroup = req.body.isgroup === true || req.body.isgroup === "true";
   const groupId = isGroup ? (req.body.sender || req.body.pengirim) : null;
   const from = isGroup ? (req.body.member || req.body.username) : (req.body.sender || req.body.from || req.body.phone);
+  const senderName = req.body.name || req.body.pushname || from;
   const text = req.body.message || req.body.pesan || req.body.text || req.body.body;
   res.status(200).send("ok");
   if (!from || !text) { console.warn("[webhook] missing sender/message", req.body); return; }
+
+  // Save ALL group messages to Supabase for context memory
+  if (isGroup && groupId) {
+    saveMessage({ groupId, sender: from, senderName, message: text })
+      .catch(err => console.warn("[db] failed to save message:", err.message));
+  }
+
   if (isGroup) {
     const tagged = text.includes(`@${BOT_NUMBER}`) || text.includes(`@${BOT_LID}`);
     if (!tagged) { console.log(`[webhook] not tagged, ignoring`); return; }
   }
   const replyTarget = groupId || from;
   try {
-    const answer = await reply(from, text);
+    const answer = await reply(from, text, groupId);
     await sendMessage(replyTarget, answer);
   } catch (err) { console.error("[webhook] error:", err.message); }
 });
+
+// Check for due dynamic reminders every minute
+cron.schedule("* * * * *", async () => {
+  try {
+    const due = await getDueReminders();
+    for (const reminder of due) {
+      await sendMessage(reminder.target, reminder.message);
+      await markReminderSent(reminder.id);
+      console.log(`[reminder] sent to ${reminder.target}: ${reminder.message}`);
+    }
+  } catch (err) {
+    console.error("[reminder] check failed:", err.message);
+  }
+}, { timezone: "Asia/Jakarta" });
 
 app.listen(PORT, () => {
   console.log(`BillyAI listening on :${PORT}`);
