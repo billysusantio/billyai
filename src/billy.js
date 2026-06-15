@@ -3,7 +3,7 @@ import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { findMemberByPhone } from "./config.js";
-import { getRecentMessages } from "./db.js";
+import { getRecentMessages, saveReminder } from "./db.js";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const MODEL = process.env.BILLY_MODEL || "gemini-2.5-flash-lite";
@@ -45,6 +45,28 @@ function getNowWIB() {
   });
 }
 
+async function detectReminder(text) {
+  const prompt = `Cek apakah pesan berikut adalah permintaan reminder/pengingat kepada asisten.
+Kalau iya, extract berapa menit dari sekarang dan isi pesannya.
+Jawab HANYA dalam format JSON tanpa markdown, contoh:
+{"isReminder": true, "minutesFromNow": 30, "message": "makan siang"}
+Kalau bukan reminder, jawab: {"isReminder": false}
+
+Pesan: "${text}"`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: { maxOutputTokens: 100 },
+    });
+    const raw = (response.text ?? "").trim().replace(/```json|```/g, "").trim();
+    return JSON.parse(raw);
+  } catch {
+    return { isReminder: false };
+  }
+}
+
 export async function reply(phone, text, groupId = null) {
   const member = findMemberByPhone(phone);
   const who = member
@@ -52,7 +74,17 @@ export async function reply(phone, text, groupId = null) {
     : `You are talking to someone not yet in the team directory.`;
   const now = `Waktu sekarang (WIB): ${getNowWIB()}.`;
 
-  // Inject recent group conversation as memory context
+  const reminderCheck = await detectReminder(text).catch(() => ({ isReminder: false }));
+  if (reminderCheck.isReminder && reminderCheck.minutesFromNow > 0) {
+    const fireAt = new Date(Date.now() + reminderCheck.minutesFromNow * 60 * 1000);
+    const target = groupId || phone;
+    await saveReminder({ target, message: `Reminder: ${reminderCheck.message}`, fireAt: fireAt.toISOString() });
+    const confirmMsg = `Sip, gw ingetin lu soal "${reminderCheck.message}" ${reminderCheck.minutesFromNow} menit lagi. ✅`;
+    remember(phone, "user", text);
+    remember(phone, "model", confirmMsg);
+    return confirmMsg;
+  }
+
   let groupContext = "";
   if (groupId) {
     const recent = await getRecentMessages(groupId, 30).catch(() => []);
@@ -69,7 +101,7 @@ export async function reply(phone, text, groupId = null) {
     contents,
     config: {
       systemInstruction: `${SYSTEM_PROMPT}\n\n${who}\n${now}${groupContext}`,
-      maxOutputTokens: 500
+      maxOutputTokens: 500,
     },
   });
   const out = (response.text ?? "").trim();
