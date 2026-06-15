@@ -3,7 +3,7 @@ import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { findMemberByPhone } from "./config.js";
-import { getRecentMessages, saveReminder } from "./db.js";
+import { getRecentMessages, saveReminder, getSummary } from "./db.js";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const MODEL = process.env.BILLY_MODEL || "gemini-2.5-flash-lite";
@@ -101,10 +101,20 @@ export async function reply(phone, text, groupId = null) {
 
   let groupContext = "";
   if (groupId) {
-    const recent = await getRecentMessages(groupId, 30).catch(() => []);
+    const [recent, summaryData] = await Promise.all([
+      getRecentMessages(groupId, 100).catch(() => []),
+      getSummary(groupId).catch(() => null),
+    ]);
+    const parts = [];
+    if (summaryData?.summary) {
+      parts.push(`Ringkasan percakapan sebelumnya:\n${summaryData.summary}`);
+    }
     if (recent.length > 0) {
       const lines = recent.map(m => `${m.sender_name || m.sender}: ${m.message}`).join("\n");
-      groupContext = `\n\nBerikut adalah 30 pesan terakhir di grup ini (untuk konteks):\n${lines}`;
+      parts.push(`100 pesan terbaru di grup:\n${lines}`);
+    }
+    if (parts.length > 0) {
+      groupContext = `\n\n${parts.join("\n\n---\n\n")}`;
     }
   }
 
