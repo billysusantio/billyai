@@ -3,6 +3,7 @@ import express from "express";
 import { reply } from "./billy.js";
 import { sendMessage, getGroups } from "./fonnte.js";
 import { startReminders } from "./reminders.js";
+import { maybeSummarize } from "./summarizer.js";
 import { saveMessage, getDueReminders, markReminderSent } from "./db.js";
 import cron from "node-cron";
 
@@ -36,6 +37,7 @@ app.post("/webhook", async (req, res) => {
   // Save ALL group messages to Supabase for context memory
   if (isGroup && groupId) {
     saveMessage({ groupId, sender: from, senderName, message: text })
+      .then(() => maybeSummarize(groupId))
       .catch(err => console.warn("[db] failed to save message:", err.message));
   }
 
