@@ -3,6 +3,7 @@ import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { findMemberByPhone } from "./config.js";
+import { getRecentMessages } from "./db.js";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const MODEL = process.env.BILLY_MODEL || "gemini-2.5-flash-lite";
@@ -44,18 +45,32 @@ function getNowWIB() {
   });
 }
 
-export async function reply(phone, text) {
+export async function reply(phone, text, groupId = null) {
   const member = findMemberByPhone(phone);
   const who = member
     ? `You are talking to ${member.name} (role: ${member.role}, team: ${member.team}).`
     : `You are talking to someone not yet in the team directory.`;
   const now = `Waktu sekarang (WIB): ${getNowWIB()}.`;
+
+  // Inject recent group conversation as memory context
+  let groupContext = "";
+  if (groupId) {
+    const recent = await getRecentMessages(groupId, 30).catch(() => []);
+    if (recent.length > 0) {
+      const lines = recent.map(m => `${m.sender_name || m.sender}: ${m.message}`).join("\n");
+      groupContext = `\n\nBerikut adalah 30 pesan terakhir di grup ini (untuk konteks):\n${lines}`;
+    }
+  }
+
   remember(phone, "user", text);
   const contents = histories.get(phone).map((m) => ({ role: m.role, parts: [{ text: m.text }] }));
   const response = await ai.models.generateContent({
     model: MODEL,
     contents,
-    config: { systemInstruction: `${SYSTEM_PROMPT}\n\n${who}\n${now}`, maxOutputTokens: 500 },
+    config: {
+      systemInstruction: `${SYSTEM_PROMPT}\n\n${who}\n${now}${groupContext}`,
+      maxOutputTokens: 500
+    },
   });
   const out = (response.text ?? "").trim();
   remember(phone, "model", out);
